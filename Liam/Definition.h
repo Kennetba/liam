@@ -72,12 +72,22 @@ const int NUMBER_OF_SENSORS = 2;  // Number of BWF sensors can be 1-4 depending 
 #define CUTTER_OVERLOAD     100
 
 // Cutter states
-const int MOWING = 0;
-const int LAUNCHING = 1;
-const int DOCKING = 2;
-const int CHARGING = 3;
-const int LOOKING_FOR_BWF = 4;
-const int SETUP_DEBUG = 5;
+enum Cutter_states
+{
+  MOWING = 0,
+  LAUNCHING,
+  DOCKING,
+  CHARGING,
+  LOOKING_FOR_BWF,
+  SETUP_DEBUG,
+  IDLE
+};
+
+enum ORIENTATION
+{
+  LEFT = 0,
+  RIGHT
+};
 
 // Turning details
 #define TURN_INTERVAL         15000

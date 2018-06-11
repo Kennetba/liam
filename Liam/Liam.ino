@@ -148,7 +148,7 @@ void setup()
   Compass.initialize();
 
   attachInterrupt(0, updateBWF, RISING);    // Run the updateBWF function every time there is a pulse on digital pin2
-  Sensor.select(0);
+  Sensor.select(ORIENTATION::LEFT);
 
   // Print version information for five seconds before starting
   Display.clear();
@@ -160,7 +160,7 @@ void setup()
   Serial.println(F("----------------"));
   Serial.println(F("Send D to enter setup and debug mode"));
   //SetupAndDebug.initialize(&Serial);
-  state = SetupAndDebug.tryEnterSetupDebugMode(0);
+  state = SetupAndDebug.tryEnterSetupDebugMode(IDLE);
   #endif
   delay(5000);
   Display.clear();
@@ -242,26 +242,31 @@ void loop()
 
   switch (state) {
 
+  //------------------------- IDLE ---------------------------
+  case IDLE:
+    delay(100);
+    break;
+    //------------------------- IDLE ---------------------------
     //------------------------- MOWING ---------------------------
-    case MOWING:
-      Battery.updateVoltage();
-      Display.update();
+  case MOWING:
+    Battery.updateVoltage();
+    Display.update();
 
-      if (Battery.mustCharge()) {
-        state = LOOKING_FOR_BWF;
-        break;
-      }
+    if (Battery.mustCharge())
+    {
+      state = LOOKING_FOR_BWF;
+      break;
+    }
 
-      Sensor.select(0);
+    Sensor.select(ORIENTATION::LEFT);
 
-      mower_is_outside = Sensor.isOutOfBounds();
+    mower_is_outside = Sensor.isOutOfBounds();
 
-
-      // Check left sensor (0) and turn right if needed
-      if (mower_is_outside) {
-        Serial.println("Left outside");
-        Serial.println(Battery.getVoltage());
-        Mower.stop();
+    // Check left sensor (0) and turn right if needed
+    if (mower_is_outside) {
+      Serial.println("Left outside");
+      Serial.println(Battery.getVoltage());
+      Mower.stop();
 #ifdef GO_BACKWARD_UNTIL_INSIDE
         err=Mower.GoBackwardUntilInside (&Sensor);
         if(err)
@@ -289,7 +294,7 @@ void loop()
         }
       }
 
-      Sensor.select(1);
+      Sensor.select(ORIENTATION::RIGHT);
 
 	  mower_is_outside = Sensor.isOutOfBounds();
 
@@ -451,7 +456,7 @@ void loop()
 
 	  if (millis() - lastDockingAllOutsideCheck > 500) {
 		  //Serial.println("Check for for right outside");
-		  Sensor.select(1);
+		  Sensor.select(ORIENTATION::RIGHT);
 		  if (Sensor.isOutOfBounds()) {
 			  Mower.stop();
 			  Mower.runBackward(FULLSPEED);
@@ -467,7 +472,7 @@ void loop()
 
 
 
-	  Sensor.select(0);
+	  Sensor.select(ORIENTATION::LEFT);
 	  if (!Sensor.isOutOfBounds()) {
 		  if (dockingInsideSince == 0) {
 			  dockingInsideSince = millis();
@@ -497,7 +502,7 @@ void loop()
 
 	case LOOKING_FOR_BWF:
     Mower.stopCutter();
-		Sensor.select(0);
+		Sensor.select(ORIENTATION::LEFT);
 		
 		if (Sensor.isOutOfBounds()) {
 			Serial.println("BWF found");

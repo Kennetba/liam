@@ -24,44 +24,43 @@
 
 
 class BWFSENSOR {
-  public:
-    BWFSENSOR(int selA, int selB);
+public:
+  BWFSENSOR(int selA, int selB);
 
-    void select(int sensornumber);
-    void clearSignal();
+  void select(int sensornumber);
+  void clearSignal();
 
-    bool isInside();
-    bool isOutside();
-    bool isTimedOut();
-	bool isOutOfBounds();
-    bool hasNoSignal();
-    bool gotSignal();
+  bool isInside();
+  bool isOutside();
+  bool isTimedOut();
+  bool isOutOfBounds();
+  bool hasNoSignal();
 
-    void readSensor();
+  void readSensor();
 
-    void printSignal();
+  void printSignal();
 
-  private:
-    // BWF Code for inside and outside the fence
-    static int inside_code[];
-    static int outside_code[];
+private:
+  // BWF Code for inside and outside the fence
+  static int inside_code[];
+  static int outside_code[];
 
-    const static int pulse_unit_length = 100;
+  const static int pulse_unit_length = 100;
 
-    int pulse_count_inside;
-    int pulse_count_outside;
+  int pulse_count_inside;
+  int pulse_count_outside;
 
-    int selpin_A;
-    int selpin_B;
+  int selpin_A;
+  int selpin_B;
 
-    int signal_status;
-    long last_match;
-    long last_pulse;
+  int signal_status;
+  long last_match;
+  long last_pulse;
 
-    // Array for debug printing
-    const static int arr_length=10;
-    int arr[arr_length];
-    int arr_count;
+  // Array for debug printing
+  const static int arr_length = 10;
+  int arr[arr_length];
+  int arr_count;
 };
 
 #endif /* _BWFSENSOR_H_ */

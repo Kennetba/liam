@@ -69,8 +69,6 @@ void BWFSENSOR::select(int sensornumber) {
   {
     delay(1);
   }
-
-  // delay(200);
 }
 
 
@@ -157,8 +155,4 @@ void BWFSENSOR::printSignal() {
     Serial.print(arr[i]);
     Serial.print(" ");
   }
-}
-bool BWFSENSOR::gotSignal()
-{
-  return arr_count >= BWF_NUMBER_OF_PULSES ? true : false;
 }
