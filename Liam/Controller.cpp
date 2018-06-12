@@ -281,25 +281,63 @@ int CONTROLLER::compensateSpeedToCompassHeading() {
 boolean CONTROLLER::wheelsAreOverloaded() {
 	long now = millis();
 	int l_load = 0;
+  int l_speed = 0;
 	int r_load = 0;
+  int r_speed = 0;
 	int l_load_limit = 0;
 	int r_load_limit = 0;
-	int counter = 0;
+	Serial.print("Runtime == ");
+  Serial.println(millis());
+
 	while (millis() - now <= 200)
 	{
+
 		l_load = leftMotor->getLoad();
-		l_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(leftMotor->getSpeed())) / FULLSPEED;
+    l_speed = leftMotor->getSpeed();
+    if(l_speed < 0)
+      l_speed = -l_speed;
+    else if(l_speed < FULLSPEED)
+    {
+    l_speed+=10;
+    leftMotor->setSpeed(l_speed);
+    }
+      
+		l_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(l_speed)) / FULLSPEED;
 
 		r_load = rightMotor->getLoad();
-		r_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(rightMotor->getSpeed())) / FULLSPEED;
-		/*counter++;*/
+    r_speed = rightMotor->getSpeed();
+    if(r_speed < 0)
+      r_speed = -r_speed;
+    else if(r_speed < FULLSPEED)
+    {
+    r_speed+=10;
+    rightMotor->setSpeed(r_speed);
+    }
+		r_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(r_speed)) / FULLSPEED;
+    Serial.print("Wheels Left: ");
+      Serial.println(l_load);
+      Serial.print("Wheels L_Limit: ");
+      Serial.println(l_load_limit);
+
+      Serial.print("Wheels Left speed: ");
+      Serial.println(l_speed);
+
+      Serial.print("Wheels Right: ");
+      Serial.println(r_load);
+
+      Serial.print("Wheels R_Limit: ");
+      Serial.println(r_load_limit);
+      Serial.print("Wheels right speed: ");
+      Serial.println(r_speed);
+
 		delay(1);
-		if (l_load  < l_load_limit && r_load < r_load_limit)
+		if ((l_load  < l_load_limit) && (r_load < r_load_limit))
 		{
 			return false;
     }
+    Serial.print("Time : ");
+    Serial.println(millis()-now);
   }
-
 	return true;
 }
 
@@ -313,6 +351,7 @@ void CONTROLLER::turnIfObstacle() {
     hasTilted() ||
 #endif
     wheelsAreOverloaded()) {
+      Serial.println("Wheels where Overloaded!!");
     int angle = random(90, 160);
     runBackward(FULLSPEED);
     delay(1200);
@@ -326,7 +365,11 @@ void CONTROLLER::turnIfObstacle() {
     stop();
     compass->setNewTargetHeading();
 
-    //runForward(FULLSPEED);
+    // runForward(FULLSPEED);
+  }
+  else
+  {
+   Serial.println("NO OVERLOAD!!!!");
   }
 }
 boolean CONTROLLER::hasBumped() {

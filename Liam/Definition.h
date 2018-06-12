@@ -21,7 +21,15 @@
 #ifndef _DEFINITION_H_
 #define _DEFINITION_H_
 
-
+/* ------------------- API --------------------*/
+#define USE_MQTT true
+enum MQTT_VALUES
+{
+  MQTT_BATTERY=0,
+  MQTT_STATE,
+  MQTT_MESSAGE
+};
+/* ------------------- API --------------------*/
 // Cutter motor types
 #define BRUSHLESS  0
 #define BRUSHED    1
@@ -82,6 +90,7 @@ enum Cutter_states
   SETUP_DEBUG,
   IDLE
 };
+
 
 enum ORIENTATION
 {

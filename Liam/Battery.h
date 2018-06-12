@@ -14,8 +14,8 @@
 #define _BATTERY_H_
 
 // Voltages should be specified in mV (12.56 V = 12560 mV)
-#define LIIONFULL       12560
-#define LIIONEMPTY      10400
+#define LIIONFULL       17000
+#define LIIONEMPTY      12500
 #define NIMHFULL        14500
 #define NIMHEMPTY       11500
 #define LEADACIDFULL    13300

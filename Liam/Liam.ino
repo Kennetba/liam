@@ -60,6 +60,7 @@
 #include "Sens5883L.h"
 #include "Sens9150.h"
 #include "Definition.h"
+#include "API.h"
 
 #ifdef DEBUG_ENABLED
   #include "SetupDebug.h"
@@ -67,6 +68,8 @@
 
 // Global variables
 int state;
+int command;
+char commonBuffer[20];
 long time_at_turning = millis();
 int turn_direction = 1;
 int LCDi = 0;
@@ -155,7 +158,7 @@ void setup()
   Display.print(F("--- LIAM ---\n"));
   Display.print(F(VERSION_STRING "\n"));
   Display.print(__DATE__ " " __TIME__ "\n");
-
+  
   #ifdef DEBUG_ENABLED
   Serial.println(F("----------------"));
   Serial.println(F("Send D to enter setup and debug mode"));
@@ -176,8 +179,11 @@ void setup()
       //Mower.runForward(FULLSPEED);
     }
   }
-
-}
+#if USE_MQTT
+    Serial.println(F("Laddar MQTT stöd."));
+    mqtt_setup();
+  #endif
+} // setup.
 
 
 
@@ -264,7 +270,9 @@ void loop()
 
     // Check left sensor (0) and turn right if needed
     if (mower_is_outside) {
-      Serial.println("Left outside");
+      strcpy(commonBuffer,"Left outside");
+      UpdateJSONObject(MQTT_MESSAGE,commonBuffer);
+      Serial.println(commonBuffer);
       Serial.println(Battery.getVoltage());
       Mower.stop();
 #ifdef GO_BACKWARD_UNTIL_INSIDE
@@ -515,6 +523,8 @@ void loop()
 		break;
       //----------------------- CHARGING ----------------------------
     case CHARGING:
+      strcpy(commonBuffer,"CHARGING");
+      UpdateJSONObject(MQTT_STATE,commonBuffer);
       // restore wheelmotor smoothness
       leftMotor.setSmoothness(WHEELMOTOR_SMOOTHNESS);
       rightMotor.setSmoothness(WHEELMOTOR_SMOOTHNESS);
@@ -553,6 +563,10 @@ void loop()
       Battery.updateVoltage();
       Serial.print("BAT:");
       Serial.println(Battery.getVoltage());
+      char buf[4];
+      itoa(Battery.getVoltage(),buf,10);
+      UpdateJSONObject(MQTT_VALUES::MQTT_BATTERY,buf);
+      mqtt_send();
 
       break;
 
