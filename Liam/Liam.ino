@@ -293,9 +293,10 @@ void doMowing() {
       continue;
     // ... otherwise ...
 
-    Serial.print("Sensor ");
-    Serial.print(i);
-    Serial.println(" outside");
+    char buf[64];
+    sprintf(buf,"%s sensor outside",ORIENTATION_STRING[i]);
+    Serial.println(buf);
+    UpdateJSONObject(MQTT_MESSAGE,buf);
     Sensor.select(i);
     Mower.stop();
 
@@ -381,8 +382,10 @@ void doDocking() {
     collisionCount++;
     lastCollision = millis();
 
-    Serial.print("Collision while docking: ");
-    Serial.println(collisionCount);
+    char buf[64];
+    sprintf(buf,"Collision while docking: %i",collisionCount);
+    UpdateJSONObject(MQTT_MESSAGE,buf);
+    Serial.println(buf);
 
     // Let it run for a bit and check if we hit the charger
     delay(1000);
@@ -492,7 +495,11 @@ void loop() {
   static long lastDisplayUpdate = 0;
   if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
     return;
-
+  if(state != previousState)
+  {
+    UpdateJSONObject(MQTT_STATE ,Cutter_states_STRING[state]);
+    previousState = state;
+  }
   long looptime = millis();
   // Check state of all sensors
   for(int i = 0; i < 2; i++) {
@@ -503,6 +510,9 @@ void loop() {
   Battery.updateVoltage();
   if(millis()-lastDisplayUpdate > 5000) {
     Display.update();
+    char buf[64];
+    sprintf(buf,"Battery %0.2fV",(double)Battery.getVoltage() / 100);
+    UpdateJSONObject(MQTT_BATTERY,buf);
     lastDisplayUpdate = millis();
   }
 

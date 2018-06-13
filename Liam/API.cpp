@@ -13,9 +13,6 @@ API INIT
 extern int command;
 extern int state;
 
-
-
-
 ELClient esp(&Serial,&Serial);
 ELClientCmd cmd(&esp);
 ELClientMqtt mqtt(&esp);
@@ -53,7 +50,7 @@ void mqttDisconnected(void *response)
 
 void mqtt_setup()
 {
-  
+
   bool ok;
   do
   {
@@ -65,7 +62,7 @@ void mqtt_setup()
   mqtt.disconnectedCb.attach(mqttDisconnected);
   mqtt.dataCb.attach(mqttData);
   mqtt.setup();
-  
+
 }
 
 long last_mqtt;
