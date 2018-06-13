@@ -12,6 +12,8 @@
 #include "Definition.h"
 #include "Error.h"
 
+extern long time_at_turning;
+
 /** Specific constructor.
 */
 CONTROLLER::CONTROLLER(WHEELMOTOR* left, WHEELMOTOR* right, CUTTERMOTOR* cut, BWFSENSOR* bwf, MOTIONSENSOR* comp) {
@@ -147,8 +149,8 @@ int CONTROLLER::waitWhileInside(int duration) {
   return 0;
 }
 
-#ifdef GO_BACKWARD_UNTIL_INSIDE
 int CONTROLLER::GoBackwardUntilInside (BWFSENSOR *Sensor) {
+#ifdef GO_BACKWARD_UNTIL_INSIDE
   int counter=MAX_GO_BACKWARD_TIME;
   //Mover has just stoped. Let it pause for a second.
   delay(1000);
@@ -160,13 +162,11 @@ int CONTROLLER::GoBackwardUntilInside (BWFSENSOR *Sensor) {
     if(counter<=0)
       return ERROR_OUTSIDE;
   }
+#endif
   return 0;
 }
-#endif
 void CONTROLLER::startCutter() {
-  if (cutter->getSpeed() == CUTTERSPEED) return;
-  for (int i=0; i<CUTTERSPEED; i++)
-    cutter->setSpeed(i);
+  cutter->setSpeedOverTime(CUTTERSPEED, CUTTER_SPINUP_TIME);
 }
 
 void CONTROLLER::stopCutter() {
@@ -287,11 +287,11 @@ boolean CONTROLLER::wheelsAreOverloaded() {
 	int counter = 0;
 	while (millis() - now <= 200)
 	{
-		l_load = leftMotor->getLoad();
-		l_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(leftMotor->getSpeed())) / FULLSPEED;
+    l_load = leftMotor->isAtTargetSpeed() ? leftMotor->getLoad() : 0;
+    l_load_limit = WHEELMOTOR_OVERLOAD;// *max(60, abs(leftMotor->getSpeed())) / FULLSPEED;
 
-		r_load = rightMotor->getLoad();
-		r_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(rightMotor->getSpeed())) / FULLSPEED;
+		r_load = rightMotor->isAtTargetSpeed() ? rightMotor->getLoad() : 0;
+    r_load_limit = WHEELMOTOR_OVERLOAD;// *max(60, abs(rightMotor->getSpeed())) / FULLSPEED;
 		/*counter++;*/
 		delay(1);
 		if (l_load  < l_load_limit && r_load < r_load_limit)
@@ -309,7 +309,7 @@ void CONTROLLER::turnIfObstacle() {
 #if defined __Bumper__
     hasBumped() ||
 #endif
-#if defined __MS9150__ || defined __MS5883L__
+#if defined __MS9150__ || defined __MS5883L__ || defined __ADXL345__
     hasTilted() ||
 #endif
     wheelsAreOverloaded()) {
@@ -324,6 +324,7 @@ void CONTROLLER::turnIfObstacle() {
       turnLeft(angle);
     }
     stop();
+    time_at_turning = millis();
     compass->setNewTargetHeading();
 
     //runForward(FULLSPEED);

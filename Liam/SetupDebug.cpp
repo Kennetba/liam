@@ -22,6 +22,9 @@ SETUPDEBUG::SETUPDEBUG(CONTROLLER* controller, WHEELMOTOR* left, WHEELMOTOR* rig
 }
 
 int SETUPDEBUG::tryEnterSetupDebugMode(int currentState) {
+#ifndef DEBUG_ENABLED
+  return currentState;
+#endif
 
   char inChar;
 
@@ -206,8 +209,8 @@ void SETUPDEBUG::getBwfSignals() {
 void SETUPDEBUG::toggleCutterMotor() {
   if (cutter_motor_is_on) {
     Serial.println(F("Ramping down cutter"));
-    for (int i=100; i>=0; i--) {
-      cutter->setSpeed(i);
+    while (cutter->setSpeedOverTime(0, CUTTER_SPINUP_TIME) != 0)
+    {
       delay(10);
     }
     Serial.println(F("Ramp down completed"));
@@ -217,8 +220,8 @@ void SETUPDEBUG::toggleCutterMotor() {
   else
   {
     Serial.println(F("Ramping up cutter"));
-    for (int i=0; i<100; i++) {
-      cutter->setSpeed(i);
+    while (cutter->setSpeedOverTime(CUTTERSPEED, CUTTER_SPINUP_TIME) != 0)
+    {
       delay(10);
     }
     Serial.println(F("Ramp up completed"));
@@ -244,14 +247,17 @@ void SETUPDEBUG::testRun() {
 void SETUPDEBUG::cutterSpeedUp() {
   cutterspeed += 10;
   if(cutterspeed > 100) cutterspeed = 100;
-  cutter->setSpeed(cutterspeed);
+  cutter->setSpeedOverTime(cutterspeed, 0);
+ 
+  cutter_motor_is_on = cutterspeed != 0;
   Serial.println(cutterspeed);
 }
 
 void SETUPDEBUG::cutterSpeedDown() {
   cutterspeed -= 10;
   if(cutterspeed < 0) cutterspeed = 0;
-  cutter->setSpeed(cutterspeed);
+  cutter->setSpeedOverTime(cutterspeed, 0);
+  cutter_motor_is_on = cutterspeed != 0;
   Serial.println(cutterspeed);
 }
 

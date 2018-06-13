@@ -70,6 +70,7 @@ const int NUMBER_OF_SENSORS = 2;  // Number of BWF sensors can be 1-4 depending 
 
 // CUTTER
 #define CUTTER_OVERLOAD     100
+#define CUTTER_SPINUP_TIME 4000
 
 // Cutter states
 enum Cutter_states
@@ -90,9 +91,10 @@ enum ORIENTATION
 };
 
 // Turning details
-#define TURN_INTERVAL         15000
 #define REVERSE_DELAY         2
 #define TURNDELAY           20 //Reduce for smaller turning angle
+// Max expected time between turns
+#define TURN_INTERVAL         60000
 
 #pragma region BWF
 
@@ -101,9 +103,6 @@ enum ORIENTATION
 #define TIMEOUT             6000 //Time without signal before error
 #define BWF_COLLECT_SIGNAL_TIME   200 // max time to spend looking for signal
 #define BWF_NUMBER_OF_PULSES  3
-// Trigger value for the mower to leave the BWF when going home
-// The higher value the more turns (in the same direction) the mower can make before leaving
-#define BALANCE_TRIGGER_LEVEL     10000
 
 // BWF Code for inside and outside
 #define INSIDE_BWF          85
@@ -129,8 +128,8 @@ enum ORIENTATION
 //#define __Lift_Sensor__
 
 // Do you have a Sensor? If so, uncomment one of these lines
-//#define __MS5883L__
-//#define __MS9150__
+//#define __MS5883L__ true
+//#define __MS9150__ true
 
 // Do you have a Display? If so, uncomment one of these lines
 //#define __OLED__
