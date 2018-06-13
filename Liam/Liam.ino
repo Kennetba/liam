@@ -490,8 +490,10 @@ void doCharging() {
 }
 
 
+
 // ***************** MAIN LOOP ***************************************
 void loop() {
+  bool update=false;
   static long lastDisplayUpdate = 0;
   if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
     return;
@@ -510,10 +512,11 @@ void loop() {
   Battery.updateVoltage();
   if(millis()-lastDisplayUpdate > 5000) {
     Display.update();
-    char buf[64];
-    sprintf(buf,"Battery %0.2fV",(double)Battery.getVoltage() / 100);
+    char buf[64]={'\0'};
+    sprintf(buf,"Battery %imV", Battery.getVoltage());
     UpdateJSONObject(MQTT_BATTERY,buf);
     lastDisplayUpdate = millis();
+    update = true;
   }
 
   // Safety checks
@@ -541,6 +544,11 @@ void loop() {
       break;
   }
 
-  Serial.print("\n\nlooptime : ");
-  Serial.println(millis() - looptime);
+  if(update) {
+    char buf[64];
+    sprintf(buf,"looptime %ims",millis() - looptime);
+    UpdateJSONObject(MQTT_LOOPTIME,buf);
+    Serial.print("\nlooptime : ");
+    Serial.println(millis() - looptime);
+  }
 }
