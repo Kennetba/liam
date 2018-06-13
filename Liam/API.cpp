@@ -8,10 +8,8 @@ API INIT
 #include <ELClientMqtt.h>
 #include <Arduino.h>
 #include "Definition.h"
- #include <ArduinoJson.h>
 
-StaticJsonBuffer<140> jsonBuffer;
-JsonObject &JSONroot = jsonBuffer.createObject();
+
 extern int command;
 extern int state;
 
@@ -87,41 +85,27 @@ void mqtt_send()
     return;
   }
 
-  // char buf[64];
-
-  // JSONroot.printTo(buf);
-  // mqtt.publish("/liam/1/event", buf);
   // last_mqtt = millis();
 }
 
 void UpdateJSONObject(int MQTT_VALUES,char *value)
 {
     // Add values in the object
-    char buf[64];
 switch (MQTT_VALUES)
 {
 case MQTT_BATTERY:
-JSONroot["Battery"] = value ;
   mqtt.publish("/liam/1/Event/Battery", value);
 break;
 case MQTT_STATE:
-JSONroot["State"] = value ;
   mqtt.publish("/liam/1/Event/State", value);
 break;
 case MQTT_MESSAGE:
-JSONroot["LM"] = value ;
   mqtt.publish("/liam/1/Event/LM", value);
-
 break;
 case MQTT_LOOPTIME:
-JSONroot["looptime"] = value ;
   mqtt.publish("/liam/1/Event/looptime", value);
-
-
 break;
 default:
 break;
-
 }
-JSONroot["LC"] = command;
 };

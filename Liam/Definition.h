@@ -100,24 +100,10 @@ enum Cutter_states {
 static const char *Cutter_states_STRING[] = {
     FOREACH_Cutter_states(GENERATE_STRING)
 };
-// Cutter states
-// enum Cutter_states
-// {
-//   MOWING = 0,
-//   LAUNCHING,
-//   DOCKING,
-//   CHARGING,
-//   LOOKING_FOR_BWF,
-//   SETUP_DEBUG,
-//   IDLE
-// };
-
 
 #define FOREACH_ORIENTATION(ORIENTATION) \
         ORIENTATION(LEFT)   \
         ORIENTATION(RIGHT)  \
-
-
 
 enum ORIENTATION {
     FOREACH_ORIENTATION(GENERATE_ENUM)
