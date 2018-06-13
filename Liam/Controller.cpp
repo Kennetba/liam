@@ -12,6 +12,8 @@
 #include "Definition.h"
 #include "Error.h"
 
+extern long time_at_turning;
+
 /** Specific constructor.
 */
 CONTROLLER::CONTROLLER(WHEELMOTOR* left, WHEELMOTOR* right, CUTTERMOTOR* cut, BWFSENSOR* bwf, MOTIONSENSOR* comp) {
@@ -164,9 +166,8 @@ int CONTROLLER::GoBackwardUntilInside (BWFSENSOR *Sensor) {
 }
 #endif
 void CONTROLLER::startCutter() {
-  if (cutter->getSpeed() == CUTTERSPEED) return;
-  for (int i=0; i<CUTTERSPEED; i++)
-    cutter->setSpeed(i);
+  cutter->setSpeedOverTime(CUTTERSPEED, CUTTER_SPINUP_TIME);
+  
 }
 
 void CONTROLLER::stopCutter() {
@@ -286,57 +287,20 @@ boolean CONTROLLER::wheelsAreOverloaded() {
   int r_speed = 0;
 	int l_load_limit = 0;
 	int r_load_limit = 0;
-	Serial.print("Runtime == ");
-  Serial.println(millis());
 
 	while (millis() - now <= 200)
 	{
+    l_load = leftMotor->isAtTargetSpeed() ? leftMotor->getLoad() : 0;
+    l_load_limit = WHEELMOTOR_OVERLOAD;// *max(60, abs(leftMotor->getSpeed())) / FULLSPEED;
 
-		l_load = leftMotor->getLoad();
-    l_speed = leftMotor->getSpeed();
-    if(l_speed < 0)
-      l_speed = -l_speed;
-    else if(l_speed < FULLSPEED)
-    {
-    l_speed+=10;
-    leftMotor->setSpeed(l_speed);
-    }
-      
-		l_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(l_speed)) / FULLSPEED;
-
-		r_load = rightMotor->getLoad();
-    r_speed = rightMotor->getSpeed();
-    if(r_speed < 0)
-      r_speed = -r_speed;
-    else if(r_speed < FULLSPEED)
-    {
-    r_speed+=10;
-    rightMotor->setSpeed(r_speed);
-    }
-		r_load_limit = WHEELMOTOR_OVERLOAD * max(60,abs(r_speed)) / FULLSPEED;
-    Serial.print("Wheels Left: ");
-      Serial.println(l_load);
-      Serial.print("Wheels L_Limit: ");
-      Serial.println(l_load_limit);
-
-      Serial.print("Wheels Left speed: ");
-      Serial.println(l_speed);
-
-      Serial.print("Wheels Right: ");
-      Serial.println(r_load);
-
-      Serial.print("Wheels R_Limit: ");
-      Serial.println(r_load_limit);
-      Serial.print("Wheels right speed: ");
-      Serial.println(r_speed);
-
+		r_load = rightMotor->isAtTargetSpeed() ? rightMotor->getLoad() : 0;
+    r_load_limit = WHEELMOTOR_OVERLOAD;// *max(60, abs(rightMotor->getSpeed())) / FULLSPEED;
+		/*counter++;*/
 		delay(1);
 		if ((l_load  < l_load_limit) && (r_load < r_load_limit))
 		{
 			return false;
     }
-    Serial.print("Time : ");
-    Serial.println(millis()-now);
   }
 	return true;
 }
@@ -347,7 +311,7 @@ void CONTROLLER::turnIfObstacle() {
 #if defined __Bumper__
     hasBumped() ||
 #endif
-#if defined __MS9150__ || defined __MS5883L__
+#if defined __MS9150__ || defined __MS5883L__ || defined __ADXL345__
     hasTilted() ||
 #endif
     wheelsAreOverloaded()) {
@@ -363,6 +327,7 @@ void CONTROLLER::turnIfObstacle() {
       turnLeft(angle);
     }
     stop();
+    time_at_turning = millis();
     compass->setNewTargetHeading();
 
     // runForward(FULLSPEED);

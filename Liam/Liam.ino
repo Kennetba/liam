@@ -102,6 +102,8 @@ BWFSENSOR Sensor(BWF_SELECT_B_PIN, BWF_SELECT_A_PIN);
 MS5883L Compass;
 #elif defined __MS9150__
 MS9150 Compass;
+#elif defined __ADXL345__
+MS9150 Compass;
 #else
 MOTIONSENSOR Compass;
 #endif
@@ -175,7 +177,7 @@ void setup()
     }
     else {                    // otherwise
       state = MOWING;
-      Mower.startCutter();          // Start up the cutter motor
+      //Mower.startCutter();          // Start up the cutter motor
       //Mower.runForward(FULLSPEED);
     }
   }
@@ -207,7 +209,7 @@ void loop()
   }
 
   // Security check Mower is flipped/lifted.
-#if defined __MS9150__ || defined __MS5883L__
+#if defined __MS9150__ || defined __MS5883L__ || __ADXL345__
   if (Mower.hasFlipped())
   {
     Serial.print("Mower has flipped ");
@@ -263,7 +265,22 @@ void loop()
       state = LOOKING_FOR_BWF;
       break;
     }
+      if((millis() - time_at_turning) > TURN_INTERVAL)
+      {
+        int angle = random(90, 160);
+        Mower.runBackward(FULLSPEED);
+        delay(1200);
 
+        if (random(0, 100) % 2 == 0) {
+          Mower.turnRight(angle);
+        }
+        else {
+          Mower.turnLeft(angle);
+        }
+        time_at_turning = millis();
+        Compass.setNewTargetHeading();
+        Mower.runForward(FULLSPEED);
+      }
     Sensor.select(ORIENTATION::LEFT);
 
     mower_is_outside = Sensor.isOutOfBounds();
@@ -291,6 +308,7 @@ void loop()
             Error.flag(err);
         }
 
+        time_at_turning = millis();
         Compass.setNewTargetHeading();
 
         if (Mower.allSensorsAreOutside()) {
@@ -327,6 +345,7 @@ void loop()
             Error.flag(err);
         }
 
+        time_at_turning = millis();
         Compass.setNewTargetHeading();
 
         if (Mower.allSensorsAreOutside()) {
@@ -348,19 +367,6 @@ void loop()
       Compass.updateHeading();
       Mower.compensateSpeedToCompassHeading();
 
-      // Check if mower has hit something
-      //if (Mower.wheelsAreOverloaded())
-      //{
-      //  Serial.print("Wheel overload ");
-      //  Mower.runBackward(FULLSPEED);
-      //  if(Mower.waitWhileInside(2000) == 0);
-      //  Mower.turnRight(90);
-      //  Compass.setNewTargetHeading();
-      //  Mower.runForward(FULLSPEED);
-      //}
-
-
-
 #if defined __Lift_Sensor__
       if (Mower.isLifted())
       {
@@ -377,7 +383,7 @@ void loop()
 #endif
 
       // Check if mower has tilted (providing you have one enabled)
-#if defined __MS9150__ || defined __MS5883L__
+#if defined __MS9150__ || defined __MS5883L__ || __ADXL345__
 
 
       // Check if mower has flipped (providing you have one enabled)
@@ -404,9 +410,10 @@ void loop()
 
       // Turn right in random degree
       Mower.turnRight(random(30,60));
-      Mower.startCutter();
+      //Mower.startCutter();
       Mower.waitWhileChecking(5000);
 
+      time_at_turning = millis();
       Compass.setNewTargetHeading();
 
       state = MOWING;
@@ -511,7 +518,24 @@ void loop()
 	case LOOKING_FOR_BWF:
     Mower.stopCutter();
 		Sensor.select(ORIENTATION::LEFT);
-		
+
+    if((millis() - time_at_turning) > TURN_INTERVAL)
+    {
+      int angle = random(90, 160);
+      Mower.runBackward(FULLSPEED);
+      delay(1200);
+
+      if (random(0, 100) % 2 == 0) {
+        Mower.turnRight(angle);
+      }
+      else {
+        Mower.turnLeft(angle);
+      }
+      time_at_turning = millis();
+      Compass.setNewTargetHeading();
+      Mower.runForward(FULLSPEED);
+    }
+
 		if (Sensor.isOutOfBounds()) {
 			Serial.println("BWF found");
 			state = DOCKING;
