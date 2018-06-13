@@ -87,38 +87,41 @@ void mqtt_send()
     return;
   }
 
-  char buf[64];
+  // char buf[64];
 
-  itoa(state, buf, 10);
-  mqtt.publish("/liam/1/state", buf);
-  Serial.print("State:");
-  Serial.println(buf);
-  itoa(command, buf, 10);
-  mqtt.publish("/liam/1/lastcmd", buf);
-  Serial.print("Command:");
-  JSONroot.printTo(buf);
-  mqtt.publish("/liam/1/test", buf);
-  last_mqtt = millis();
+  // JSONroot.printTo(buf);
+  // mqtt.publish("/liam/1/event", buf);
+  // last_mqtt = millis();
 }
 
 void UpdateJSONObject(int MQTT_VALUES,char *value)
 {
     // Add values in the object
- Serial.println(value);
+    char buf[64];
 switch (MQTT_VALUES)
 {
 case MQTT_BATTERY:
 JSONroot["Battery"] = value ;
+  mqtt.publish("/liam/1/Event/Battery", value);
 break;
 case MQTT_STATE:
 JSONroot["State"] = value ;
+  mqtt.publish("/liam/1/Event/State", value);
 break;
 case MQTT_MESSAGE:
-JSONroot["LastMessage"] = value ;
+JSONroot["LM"] = value ;
+  mqtt.publish("/liam/1/Event/LM", value);
+
+break;
+case MQTT_LOOPTIME:
+JSONroot["looptime"] = value ;
+  mqtt.publish("/liam/1/Event/looptime", value);
+
+
 break;
 default:
 break;
 
 }
-JSONroot["LastCommand"] = command;
+JSONroot["LC"] = command;
 };

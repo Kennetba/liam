@@ -27,7 +27,8 @@ enum MQTT_VALUES
 {
   MQTT_BATTERY=0,
   MQTT_STATE,
-  MQTT_MESSAGE
+  MQTT_MESSAGE,
+  MQTT_LOOPTIME
 };
 /* ------------------- API --------------------*/
 // Cutter motor types
@@ -80,23 +81,50 @@ const int NUMBER_OF_SENSORS = 2;  // Number of BWF sensors can be 1-4 depending 
 #define CUTTER_OVERLOAD     100
 #define CUTTER_SPINUP_TIME 4000
 
-// Cutter states
-enum Cutter_states
-{
-  MOWING = 0,
-  LAUNCHING,
-  DOCKING,
-  CHARGING,
-  LOOKING_FOR_BWF,
-  SETUP_DEBUG,
-  IDLE
+#define GENERATE_ENUM(ENUM) ENUM,
+#define GENERATE_STRING(STRING) #STRING,
+
+#define FOREACH_Cutter_states(Cutter_states) \
+        Cutter_states(MOWING)   \
+        Cutter_states(LAUNCHING)  \
+        Cutter_states(DOCKING)  \
+        Cutter_states(CHARGING)  \
+        Cutter_states(LOOKING_FOR_BWF)  \
+        Cutter_states(SETUP_DEBUG)  \
+        Cutter_states(IDLE)  \
+
+enum Cutter_states {
+    FOREACH_Cutter_states(GENERATE_ENUM)
 };
 
+static const char *Cutter_states_STRING[] = {
+    FOREACH_Cutter_states(GENERATE_STRING)
+};
+// Cutter states
+// enum Cutter_states
+// {
+//   MOWING = 0,
+//   LAUNCHING,
+//   DOCKING,
+//   CHARGING,
+//   LOOKING_FOR_BWF,
+//   SETUP_DEBUG,
+//   IDLE
+// };
 
-enum ORIENTATION
-{
-  LEFT = 0,
-  RIGHT
+
+#define FOREACH_ORIENTATION(ORIENTATION) \
+        ORIENTATION(LEFT)   \
+        ORIENTATION(RIGHT)  \
+
+
+
+enum ORIENTATION {
+    FOREACH_ORIENTATION(GENERATE_ENUM)
+};
+
+static const char *ORIENTATION_STRING[] = {
+    FOREACH_ORIENTATION(GENERATE_STRING)
 };
 
 // Turning details
@@ -125,7 +153,7 @@ enum ORIENTATION
 
 #define MAJOR_VERSION           5
 #define MINOR_VERSION_1         2
-#define MINOR_VERSION_2         2
+#define MINOR_VERSION_2         3
 
 // A bit of macro magic to make a string out of the version number
 // The preprocessor works in mysterious ways...

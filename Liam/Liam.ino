@@ -68,6 +68,7 @@
 
 // Global variables
 int state;
+int previousState;
 int command;
 char commonBuffer[20];
 long time_at_turning = millis();
@@ -79,6 +80,8 @@ long dockingInsideSince = 0;
 long lastDockingAllOutsideCheck = 0;
 
 bool debug_mode = false;
+boolean mower_is_outside;
+int err=0;
 
 
 // Set up all the defaults (check the Definition.h file for all default values)
@@ -160,7 +163,7 @@ void setup()
   Display.print(F("--- LIAM ---\n"));
   Display.print(F(VERSION_STRING "\n"));
   Display.print(__DATE__ " " __TIME__ "\n");
-  
+
   #ifdef DEBUG_ENABLED
   Serial.println(F("----------------"));
   Serial.println(F("Send D to enter setup and debug mode"));
@@ -187,12 +190,58 @@ void setup()
   #endif
 } // setup.
 
+void CheckSensor(int sensor)
+{
+  Sensor.select(sensor);
 
+  mower_is_outside = Sensor.isOutOfBounds();
 
+  // Check left sensor (0) and turn right if needed
+  if (mower_is_outside)
+  {
+    err = sprintf (commonBuffer, "%s is outside",ORIENTATION_STRING[sensor]);
+    if(err > 0)
+      UpdateJSONObject(MQTT_MESSAGE, commonBuffer);
+    Serial.println(commonBuffer);
+    Serial.println(Battery.getVoltage());
+    Mower.stop();
+#ifdef GO_BACKWARD_UNTIL_INSIDE
+    err = Mower.GoBackwardUntilInside(&Sensor);
+    if (err)
+      Error.flag(err);
+#endif
+
+    // Tries to turn, but if timeout then reverse and try again
+    if (err = Mower.turnToReleaseRight(30) > 0)
+    {
+      Mower.runBackward(FULLSPEED);
+      delay(1000);
+      Mower.stop();
+      if (err = Mower.turnToReleaseRight(30) > 0)
+        Error.flag(err);
+    }
+
+    time_at_turning = millis();
+    Compass.setNewTargetHeading();
+
+    if (Mower.allSensorsAreOutside())
+    {
+      Mower.runBackward(FULLSPEED);
+      delay(1000);
+      Mower.stop();
+      if (Mower.allSensorsAreOutside())
+        Error.flag(ERROR_OUTSIDE);
+    }
+  }
+}
 // ***************** Main loop ***********************************
 void loop()
 {
-
+if(previousState != state)
+  {
+    UpdateJSONObject(MQTT_STATE,Cutter_states_STRING[state]);
+    previousState = state;
+  }
   #ifdef DEBUG_ENABLED
   state = SetupAndDebug.tryEnterSetupDebugMode(state);
   if (state == SETUP_DEBUG) {
@@ -201,8 +250,7 @@ void loop()
   #endif
   long looptime= millis();
   boolean in_contact;
-  boolean mower_is_outside;
-  int err=0;
+
   LCDi++;  //Loops 0-10
   if (LCDi % 2500 == 0 ){
     Display.update();
@@ -281,81 +329,9 @@ void loop()
         Compass.setNewTargetHeading();
         Mower.runForward(FULLSPEED);
       }
-    Sensor.select(ORIENTATION::LEFT);
+      CheckSensor(ORIENTATION::LEFT);
 
-    mower_is_outside = Sensor.isOutOfBounds();
-
-    // Check left sensor (0) and turn right if needed
-    if (mower_is_outside) {
-      strcpy(commonBuffer,"Left outside");
-      UpdateJSONObject(MQTT_MESSAGE,commonBuffer);
-      Serial.println(commonBuffer);
-      Serial.println(Battery.getVoltage());
-      Mower.stop();
-#ifdef GO_BACKWARD_UNTIL_INSIDE
-        err=Mower.GoBackwardUntilInside (&Sensor);
-        if(err)
-          Error.flag(err);
-#endif
-
-
-        // Tries to turn, but if timeout then reverse and try again
-        if (err = Mower.turnToReleaseRight(30) > 0) {
-          Mower.runBackward(FULLSPEED);
-          delay(1000);
-          Mower.stop();
-          if (err = Mower.turnToReleaseRight(30) > 0)
-            Error.flag(err);
-        }
-
-        time_at_turning = millis();
-        Compass.setNewTargetHeading();
-
-        if (Mower.allSensorsAreOutside()) {
-          Mower.runBackward(FULLSPEED);
-          delay(1000);
-          Mower.stop();
-          if (Mower.allSensorsAreOutside())
-            Error.flag(ERROR_OUTSIDE);
-        }
-      }
-
-      Sensor.select(ORIENTATION::RIGHT);
-
-	  mower_is_outside = Sensor.isOutOfBounds();
-
-      // Check right sensor (1) and turn left if needed
-      if (mower_is_outside) {
-        Serial.println("Right Outside");
-        Serial.println(Battery.getVoltage());
-        Mower.stop();
-
-#ifdef GO_BACKWARD_UNTIL_INSIDE
-        err=Mower.GoBackwardUntilInside(&Sensor);
-        if(err)
-          Error.flag(err);
-#endif
-
-        // Tries to turn, but if timeout then reverse and try again
-        if (err = Mower.turnToReleaseLeft(30) > 0) {
-          Mower.runBackward(FULLSPEED);
-          delay(1000);
-          Mower.stop();
-          if (err = Mower.turnToReleaseLeft(30) > 0)
-            Error.flag(err);
-        }
-
-        time_at_turning = millis();
-        Compass.setNewTargetHeading();
-
-        if (Mower.allSensorsAreOutside()) {
-          Mower.runBackward(FULLSPEED);
-          delay(1000);
-          Mower.stop();
-          if (Mower.allSensorsAreOutside())
-            Error.flag(ERROR_OUTSIDE);
-        }
-      }
+      CheckSensor(ORIENTATION::RIGHT);
 
       Mower.startCutter();
       Mower.runForwardOverTime(SLOWSPEED, FULLSPEED, ACCELERATION_DURATION);
@@ -547,8 +523,6 @@ void loop()
 		break;
       //----------------------- CHARGING ----------------------------
     case CHARGING:
-      strcpy(commonBuffer,"CHARGING");
-      UpdateJSONObject(MQTT_STATE,commonBuffer);
       // restore wheelmotor smoothness
       leftMotor.setSmoothness(WHEELMOTOR_SMOOTHNESS);
       rightMotor.setSmoothness(WHEELMOTOR_SMOOTHNESS);
@@ -595,6 +569,14 @@ void loop()
       break;
 
   }
+  double diff = millis() - looptime * 1.1;
+  double current = millis() - looptime;
+  if(current > (double)(looptime + diff) || current < (double)(looptime - diff))
+    {
+      
+      itoa(current,commonBuffer,10);
+UpdateJSONObject(MQTT_LOOPTIME,commonBuffer);
+    }
   Serial.print("\n\nlooptime : ");
     Serial.println(millis() - looptime);
 
