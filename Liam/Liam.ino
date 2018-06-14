@@ -68,20 +68,11 @@
 
 // Global variables
 int state;
-int previousState;
 int command;
+
 char commonBuffer[20];
 long time_at_turning = millis();
-int turn_direction = 1;
-int LCDi = 0;
-int dockCollisionCount = 0;
-long lastCollision = 0;
-long dockingInsideSince = 0;
-long lastDockingAllOutsideCheck = 0;
 
-bool debug_mode = false;
-boolean mower_is_outside;
-int err=0;
 bool sensorOutside[2];
 
 
@@ -142,14 +133,15 @@ void updateBWF() {
 
 // ****************** SETUP ******************************************
 void setup() {
-  // Turn off the cutter motor as fast as possible
-  CutterMotor.initialize();
 
   // Fast communication on the serial port for all terminal messages
   Serial.begin(115200);
 
   // Configure all the pins for input or output
   Defaults.definePinsInputOutput();
+
+  // Turn off the cutter motor as fast as possible
+  CutterMotor.initialize();
 
   // Set default levels (defined in Definition.h) for your mower
   Defaults.setDefaultLevels(&Battery, &leftMotor, &rightMotor, &CutterMotor);
@@ -193,41 +185,9 @@ void setup() {
 #if USE_MQTT
     Serial.println(F("Laddar MQTT stöd."));
     mqtt_setup();
-  #endif
+#endif
 } // setup.
 
-void CheckSensor(int sensor)
-{
-  Sensor.select(sensor);
-
-  mower_is_outside = Sensor.isOutOfBounds();
-
-  // Check left sensor (0) and turn right if needed
-  if (mower_is_outside)
-  {
-    err = sprintf (commonBuffer, "%s is outside",ORIENTATION_STRING[sensor]);
-    if(err > 0)
-      UpdateJSONObject(MQTT_MESSAGE, commonBuffer);
-    Serial.println(commonBuffer);
-    Serial.println(Battery.getVoltage());
-    Mower.stop();
-#ifdef GO_BACKWARD_UNTIL_INSIDE
-    err = Mower.GoBackwardUntilInside(&Sensor);
-    if (err)
-      Error.flag(err);
-#endif
-}
-
-    // Tries to turn, but if timeout then reverse and try again
-    if (err = Mower.turnToReleaseRight(30) > 0)
-    {
-      Mower.runBackward(FULLSPEED);
-      delay(1000);
-      Mower.stop();
-      if (err = Mower.turnToReleaseRight(30) > 0)
-        Error.flag(err);
-    }
-}
 // TODO: This should probably be in Controller
 void randomTurn(bool goBack) {
   if(goBack) {
@@ -493,30 +453,26 @@ void doCharging() {
 
 // ***************** MAIN LOOP ***************************************
 void loop() {
-  bool update=false;
   static long lastDisplayUpdate = 0;
+  static int previousState;
+
+  long looptime = millis();
+
   if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
     return;
+
   if(state != previousState)
   {
     UpdateJSONObject(MQTT_STATE ,Cutter_states_STRING[state]);
     previousState = state;
   }
-  long looptime = millis();
+
+  Battery.updateVoltage();
+
   // Check state of all sensors
   for(int i = 0; i < 2; i++) {
     Sensor.select(i);
     sensorOutside[i] = Sensor.isOutOfBounds();
-  }
-
-  Battery.updateVoltage();
-  if(millis()-lastDisplayUpdate > 5000) {
-    Display.update();
-    char buf[64]={'\0'};
-    sprintf(buf,"Battery %imV", Battery.getVoltage());
-    UpdateJSONObject(MQTT_BATTERY,buf);
-    lastDisplayUpdate = millis();
-    update = true;
   }
 
   // Safety checks
@@ -544,11 +500,18 @@ void loop() {
       break;
   }
 
-  if(update) {
+  if(millis()-lastDisplayUpdate > 5000) {
+    Display.update();
+
     char buf[64];
+    sprintf(buf,"Battery %imV", Battery.getVoltage());
+    UpdateJSONObject(MQTT_BATTERY,buf);
     sprintf(buf,"looptime %ims",millis() - looptime);
     UpdateJSONObject(MQTT_LOOPTIME,buf);
+
     Serial.print("\nlooptime : ");
     Serial.println(millis() - looptime);
+
+    lastDisplayUpdate = millis();
   }
 }
