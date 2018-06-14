@@ -458,8 +458,10 @@ void loop() {
 
   long looptime = millis();
 
-  if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
-    return;
+  #ifdef DEBUG_ENABLED
+    if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
+      return;
+  #endif
 
   if(state != previousState)
   {
