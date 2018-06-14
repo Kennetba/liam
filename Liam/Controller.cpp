@@ -314,7 +314,6 @@ void CONTROLLER::turnIfObstacle() {
     hasTilted() ||
 #endif
     wheelsAreOverloaded()) {
-      Serial.println("Wheels where Overloaded!!");
     int angle = random(90, 160);
     runBackward(FULLSPEED);
     delay(1200);
@@ -330,10 +329,6 @@ void CONTROLLER::turnIfObstacle() {
     compass->setNewTargetHeading();
 
     // runForward(FULLSPEED);
-  }
-  else
-  {
-   Serial.println("NO OVERLOAD!!!!");
   }
 }
 boolean CONTROLLER::hasBumped() {

@@ -548,6 +548,7 @@ void loop() {
     char buf[64];
     sprintf(buf,"looptime %ims",millis() - looptime);
     UpdateJSONObject(MQTT_LOOPTIME,buf);
+    previousState = -1;
     Serial.print("\nlooptime : ");
     Serial.println(millis() - looptime);
   }

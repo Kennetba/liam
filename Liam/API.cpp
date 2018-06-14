@@ -91,16 +91,16 @@ void UpdateJSONObject(int MQTT_VALUES,char *value)
 switch (MQTT_VALUES)
 {
 case MQTT_BATTERY:
-  mqtt.publish("/liam/1/Event/Battery", value);
+  mqtt.publish("/liam/1/Event/Battery", value,0,1);
 break;
 case MQTT_STATE:
-  mqtt.publish("/liam/1/Event/State", value);
+  mqtt.publish("/liam/1/Event/State", value,0,1);
 break;
 case MQTT_MESSAGE:
-  mqtt.publish("/liam/1/Event/LM", value);
+  mqtt.publish("/liam/1/Event/LM", value,0,1);
 break;
 case MQTT_LOOPTIME:
-  mqtt.publish("/liam/1/Event/looptime", value);
+  mqtt.publish("/liam/1/Event/looptime", value,0,1);
 break;
 default:
 break;
