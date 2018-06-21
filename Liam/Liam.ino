@@ -65,9 +65,21 @@
 #ifdef DEBUG_ENABLED
   #include "SetupDebug.h"
 #endif
+#if USE_MQTT
+#include <ELClient.h>
+#include <ELClientCmd.h>
+#include <ELClientMqtt.h>
+ELClient esp(&Serial,&Serial);
+ELClientCmd cmd(&esp);
+ELClientMqtt mqtt(&esp);
+long publishTime = -1;
+bool connected;
+long last_mqtt;
+#endif
 
 // Global variables
 int state;
+int previousState = -1;
 int command;
 
 char commonBuffer[20];
@@ -125,12 +137,33 @@ CLOCK Clock(GO_OUT_TIME, GO_HOME_TIME);
 // Error handler
 ERROR Error(&Display, LED_PIN, &Mower);
 
+//  API
+
+API api(&Battery,&Mower,&state);
 // This function calls the sensor object every time there is a new signal pulse on pin2
 void updateBWF() {
   Sensor.readSensor();
 }
 
-
+void setMowerState()
+{
+  switch (state)
+  {
+  case Cutter_states::MOWING:
+    Mower.startCutter();
+    Mower.runForward(FULLSPEED);
+    break;
+  case Cutter_states::IDLE:
+    Mower.stopCutter();
+    Mower.stop();
+    break;
+  case Cutter_states::LOOKING_FOR_BWF:
+    Mower.stopCutter();
+    break;
+  default:
+    break;
+  }
+}
 // ****************** SETUP ******************************************
 void setup() {
 
@@ -206,7 +239,6 @@ void randomTurn(bool goBack) {
   Mower.runForward(FULLSPEED);
 }
 
-
 // ***************** SAFETY CHECKS ***********************************
 void checkIfFlipped() {
 #if defined __MS9150__ || defined __MS5883L__ || __ADXL345__
@@ -253,10 +285,18 @@ void doMowing() {
       continue;
     // ... otherwise ...
 
-    char buf[64];
-    sprintf(buf,"%s sensor outside",ORIENTATION_STRING[i]);
-    Serial.println(buf);
-    UpdateJSONObject(MQTT_MESSAGE,buf);
+    char buf[40];
+    #if USE_MQTT
+    {
+      sprintf_P(buf, PSTR("{\"message\":\"%s sensor outside\"}"),ORIENTATION_STRING[i]);
+      UpdateJSONObject(MQTT_MESSAGE, buf);
+    }
+    #else
+    {
+      sprintf_P(buf, PSTR("%s sensor outside"), ORIENTATION_STRING[i]);
+      Serial.println(buf);
+    }
+    #endif
     Sensor.select(i);
     Mower.stop();
 
@@ -323,10 +363,11 @@ void doDocking() {
   static long lastCollision = 0;
   static long lastAllOutsideCheck = 0;
   static long lastOutside = 0;
+  char buf[40];
 
   Mower.stopCutter();
 
-  if(sensorOutside[ORIENTATION::LEFT])
+  if(sensorOutside[0])
     lastOutside = millis();
 
   if(Battery.isBeingCharged()) {
@@ -341,12 +382,14 @@ void doDocking() {
       collisionCount = 0;
     collisionCount++;
     lastCollision = millis();
-
-    char buf[64];
-    sprintf(buf,"Collision while docking: %i",collisionCount);
+    #if USE_MQTT
+    sprintf_P(buf, PSTR("%S%i") , "Collision while docking: ",collisionCount);
     UpdateJSONObject(MQTT_MESSAGE,buf);
-    Serial.println(buf);
 
+    #else
+    Serial.print(F("Collision while docking: "));
+    Serial.println(collisionCount);
+#endif
     // Let it run for a bit and check if we hit the charger
     delay(1000);
     if(Battery.isBeingCharged()) {
@@ -395,7 +438,7 @@ void doDocking() {
   // Track the BWF by compensating the wheel motor speeds
   Sensor.select(ORIENTATION::LEFT);
   Mower.adjustMotorSpeeds();
-}
+} // DOCKING
 
 void doLookForBWF() {
   Mower.stopCutter();
@@ -453,20 +496,26 @@ void doCharging() {
 
 // ***************** MAIN LOOP ***************************************
 void loop() {
-  static long lastDisplayUpdate = 0;
-  static int previousState;
-
-  long looptime = millis();
-
+  #if(USE_MQTT)
+  esp.Process();
+  #else
   #ifdef DEBUG_ENABLED
     if((state = SetupAndDebug.tryEnterSetupDebugMode(state)) == SETUP_DEBUG)
       return;
   #endif
+  #endif
 
+  static long lastDisplayUpdate = 0;
+
+  long looptime = millis();
+  
   if(state != previousState)
   {
-    UpdateJSONObject(MQTT_STATE ,Cutter_states_STRING[state]);
+    char buf[40] ={'\0'};
+    sprintf_P(buf, PSTR("{\"state\":%i,\"name\":\"%s\"}"),state,Cutter_states_STRING[state]);
+    UpdateJSONObject(MQTT_STATE ,buf);
     previousState = state;
+    setMowerState();
   }
 
   Battery.updateVoltage();
@@ -502,19 +551,99 @@ void loop() {
       break;
   }
 
-  if(millis()-lastDisplayUpdate > 5000) {
+  if (millis() - lastDisplayUpdate > 15000)
+  {
     Display.update();
 
-    char buf[64];
-    sprintf(buf,"Battery %imV", Battery.getVoltage());
-    UpdateJSONObject(MQTT_BATTERY,buf);
-    sprintf(buf,"looptime %ims",millis() - looptime);
-    UpdateJSONObject(MQTT_LOOPTIME,buf);
-    previousState = -1;
+    char buf[40];
 
-    Serial.print("\nlooptime : ");
-    Serial.println(millis() - looptime);
-
+  if (USE_MQTT)
+      {
+        sprintf_P(buf, PSTR("{\"battery\": %i}"), Battery.getVoltage());
+        UpdateJSONObject(MQTT_BATTERY, buf);
+        sprintf_P(buf, PSTR("{\"looptime\": %i}"), millis() - looptime);
+        UpdateJSONObject(MQTT_LOOPTIME, buf);
+      }
+      else
+      {
+        sprintf_P(buf, PSTR("Battery %imV"), Battery.getVoltage());
+        Serial.println(buf);
+        sprintf(buf, PSTR("looptime %ims"), millis() - looptime);
+        Serial.println(buf);
+      }
     lastDisplayUpdate = millis();
   }
 }
+
+
+#pragma region MQTT
+
+void mqttData(void *response)
+{
+ 
+  ELClientResponse *res = (ELClientResponse *)response;
+
+  String topic = res->popString();
+  String data = res->popString();
+
+  char temp[64];
+  // response needs to be copied due to scope issues i guess //
+  strcpy(temp,api.API_Parse_Command(topic ,&data));
+  mqtt.publish("/liam/1/cmd_resp",temp);
+};
+void mqttConnected(void *response)
+{
+  mqtt.subscribe("/liam/1/cmd/#");
+  Serial.println(F("MQTT CONNECTED"));
+  connected = true;
+}
+void mqttDisconnected(void *response)
+{
+  connected = false;
+  Serial.println(F("MQTT DISCONNECTED"));
+}
+
+void mqtt_setup()
+{
+  bool ok;
+  do
+  {
+    ok = esp.Sync();
+    if(!ok) Serial.println(".");
+  } while(!ok);
+  Serial.println(F("Synced"));
+  mqtt.connectedCb.attach(mqttConnected);
+  mqtt.disconnectedCb.attach(mqttDisconnected);
+  mqtt.dataCb.attach(mqttData);
+  mqtt.setup();
+}
+
+void UpdateJSONObject(int MQTT_VALUES, char *value)
+{
+if(!connected)
+  {
+    Serial.println(F("Not connected"));
+    return;
+  }
+
+  switch (MQTT_VALUES)
+  {
+  case MQTT_BATTERY:
+    mqtt.publish("/liam/1/event/battery", value, 0, 1);
+    break;
+  case MQTT_STATE:
+    mqtt.publish("/liam/1/event/state", value, 0, 1);
+    break;
+  case MQTT_MESSAGE:
+    mqtt.publish("/liam/1/event/lastmessage", value, 0, 1);
+    break;
+  case MQTT_LOOPTIME:
+    mqtt.publish("/liam/1/event/looptime", value, 0, 1);
+    break;
+  default:
+    break;
+  }
+};
+
+
+#pragma endregion MQTT

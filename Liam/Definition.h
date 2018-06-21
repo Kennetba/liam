@@ -49,6 +49,8 @@ enum MQTT_VALUES
 
 const int NUMBER_OF_SENSORS = 2;  // Number of BWF sensors can be 1-4 depending on shield default 2 left and right front.
 
+#define BETWEEN(value, min, max) (value <= max && value >= min)
+
 // Pin setup following Morgan 1.5 shield and up
 #define WHEEL_MOTOR_A_CURRENT_PIN       0
 #define WHEEL_MOTOR_B_CURRENT_PIN       1
@@ -136,7 +138,7 @@ static const char *ORIENTATION_STRING[] = {
 
 #define MAJOR_VERSION           5
 #define MINOR_VERSION_1         2
-#define MINOR_VERSION_2         3
+#define MINOR_VERSION_2         4
 
 // A bit of macro magic to make a string out of the version number
 // The preprocessor works in mysterious ways...
@@ -179,8 +181,8 @@ static const char *ORIENTATION_STRING[] = {
 // Enable this if you need the mower to go backward until it's inside and then turn.
 // Default behavior is to turn directly when mower is outside BWF, if definition below is enabled this might help mower not to get stuck in slopes.
 // If mower is not inside within x seconds mower will stop.
-//#define GO_BACKWARD_UNTIL_INSIDE
-//#define MAX_GO_BACKWARD_TIME  5 // try to get inside for max x seconds, then stop and error.
+#define GO_BACKWARD_UNTIL_INSIDE false
+#define MAX_GO_BACKWARD_TIME  5 // try to get inside for max x seconds, then stop and error.
 
 class DEFINITION {
   public:

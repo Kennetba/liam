@@ -14,8 +14,8 @@
 #define _BATTERY_H_
 
 // Voltages should be specified in mV (12.56 V = 12560 mV)
-#define LIIONFULL       12600
-#define LIIONEMPTY      10500
+#define LIIONFULL       27000
+#define LIIONEMPTY      1300
 #define NIMHFULL        14500
 #define NIMHEMPTY       11500
 #define LEADACIDFULL    13300
@@ -57,5 +57,4 @@ class BATTERY {
     int depletedLevel;
     word averageVoltage;
 };
-
 #endif /* _BATTERY_H_ */

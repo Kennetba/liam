@@ -150,7 +150,7 @@ int CONTROLLER::waitWhileInside(int duration) {
 }
 
 int CONTROLLER::GoBackwardUntilInside (BWFSENSOR *Sensor) {
-#ifdef GO_BACKWARD_UNTIL_INSIDE
+#if GO_BACKWARD_UNTIL_INSIDE
   int counter=MAX_GO_BACKWARD_TIME;
   //Mover has just stoped. Let it pause for a second.
   delay(1000);
@@ -219,7 +219,7 @@ void CONTROLLER::adjustMotorSpeeds() {
   int lowSpeed = 40;
   int highSpeed = FULLSPEED;
   int shortTime = 10;
-  int longTime = 500;
+  int longTime = 200;
 
   if (sensor->isOutOfBounds()) {
 	  //Serial.println("Adjust to out of bounds");
@@ -256,7 +256,6 @@ void CONTROLLER::updateBalance() {
 void CONTROLLER::stop() {
   leftMotor->setSpeed(0);
   rightMotor->setSpeed(0);
-
 }
 
 int CONTROLLER::compensateSpeedToCutterLoad() {

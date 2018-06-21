@@ -2,107 +2,71 @@
 API INIT
 */
 
-#include "API.h"
-#include <ELClient.h>
-#include <ELClientCmd.h>
-#include <ELClientMqtt.h>
+
+
 #include <Arduino.h>
 #include "Definition.h"
+#include "API.h"
+#include "Battery.h"
+#include <ArduinoJson.h>
+#include "Controller.h"
 
-
-extern int command;
-extern int state;
-
-ELClient esp(&Serial,&Serial);
-ELClientCmd cmd(&esp);
-ELClientMqtt mqtt(&esp);
-void mqttData(void *response)
+API::API(BATTERY *battery,CONTROLLER *controller,int *state)
 {
-  ELClientResponse *res = (ELClientResponse *)response;
-  String topic = res->popString();
-  String data = res->popString();
-  Serial.print("MQTT In (");
-  Serial.print(topic);
-  Serial.print(") ");
-  Serial.println(data);
-  if(topic == F("/mower/1/command"))
+  this->battery = battery;
+  this->controller = controller;
+  this->state = state;
+}
+ 
+ char* API::API_Parse_Command(String topic,String *data)
+{
+   StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(*data);
+    // Test if parsing succeeds.
+    if (!root.success())
+    {
+      // mqtt.publish("/liam/1/cmd_resp", "JSON parser faild");
+      return;
+    }
+    char _resp[64]; // Mqtt response.
+  // holds command
+  int cmdargs[10] ={-1};
+  // set topic to lowecase..
+  for (int i = 0; topic[i]; i++)
   {
-    if(data == "M")
-      command = CMD_MOW;
-    else if(data == "H")
-      command = CMD_HOME;
-    else
-      command = CMD_AUTO;
+    topic[i] = tolower(topic[i]);
   }
-}
-bool connected;
-void mqttConnected(void *response)
-{
-  mqtt.subscribe("/liam/1/cmd");
-  Serial.println("MQTT CONNECTED");
-  connected = true;
-}
-void mqttDisconnected(void *response)
-{
-  connected = false;
-  Serial.println("MQTT DISCONNECTED");
-}
-
-void mqtt_setup()
-{
-
-  bool ok;
-  do
+  if (topic == F("/liam/1/cmd/set"))
   {
-    ok = esp.Sync();
-    if(!ok) Serial.println(".");
-  } while(!ok);
-  Serial.println("Synced");
-  mqtt.connectedCb.attach(mqttConnected);
-  mqtt.disconnectedCb.attach(mqttDisconnected);
-  mqtt.dataCb.attach(mqttData);
-  mqtt.setup();
-
-}
-
-long last_mqtt;
-
-
-void mqtt_send()
-{
-  esp.Process();
-  if(!connected)
-  {
-    Serial.println("Not connected");
-    return;
+    cmdargs[0] = (int)root["0"];
+    cmdargs[1] = (int)root["1"]; // first value, set commands always have at least one.
+    switch (cmdargs[0])
+    {
+      case API::Liam_Command::SetState:
+     sprintf_P(_resp, PSTR("{\"Set_state\":\"%s\"}"),Cutter_states_STRING[cmdargs[1]]);
+    *state = cmdargs[1];
+        break;
+      default:
+      sprintf_P(_resp, PSTR("{\"cmd\":%i,\"result\":\"ERROR\"}"),cmdargs[0]);
+        break;
+    }
   }
-  if((millis()-last_mqtt) < 10000)
+  else if (topic == F("/liam/1/cmd/get"))
   {
-    Serial.println("Not time to send");
-    return;
+    cmdargs[0] = (int)root["0"];
+    cmdargs[1] = (int)root["1"]; // first value, might have a number
+    switch (cmdargs[0])
+    {
+    case API::Liam_Command::GetState:
+      sprintf_P(_resp, PSTR("{\"state\":%i,\"name\":\"%s\"}"), *this->state,Cutter_states_STRING[*this->state]);
+      break;
+    case API::Liam_Command::GetBattery:
+      sprintf_P(_resp, PSTR("{\"Battery\":\"%i\"}"),(int)battery->getVoltage());
+      break;
+    default:
+      sprintf_P(_resp, PSTR("{\"cmd\":%i,\"result\":%i}"), cmdargs[0], API::Liam_Command_STATUS_CODE::API_CODE_ERROR);
+      break;
+    }
   }
-
-  // last_mqtt = millis();
+  return _resp;
 }
-
-void UpdateJSONObject(int MQTT_VALUES,char *value)
-{
-    // Add values in the object
-switch (MQTT_VALUES)
-{
-case MQTT_BATTERY:
-  mqtt.publish("/liam/1/Event/Battery", value,0,1);
-break;
-case MQTT_STATE:
-  mqtt.publish("/liam/1/Event/State", value,0,1);
-break;
-case MQTT_MESSAGE:
-  mqtt.publish("/liam/1/Event/LM", value,0,1);
-break;
-case MQTT_LOOPTIME:
-  mqtt.publish("/liam/1/Event/looptime", value,0,1);
-break;
-default:
-break;
-}
-};
