@@ -45,6 +45,7 @@ class CONTROLLER {
     void setDefaultDirectionForward(bool fwd);
 
     void adjustMotorSpeeds();
+    void adjustMotorSpeeds(short percent,void (*UpdateJSONObject)(int MQTT_VALUES, char *value));
     int compensateSpeedToCutterLoad();
     int compensateSpeedToCompassHeading();
 
@@ -85,6 +86,8 @@ class CONTROLLER {
 
     unsigned long overloadTime;
     unsigned long overloadInterval;
+    bool lastloopsensorwasoutside=false;
+    int counter=0;
 
 };
 

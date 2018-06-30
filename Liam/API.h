@@ -8,7 +8,7 @@ class API
 {
 public:
   API(BATTERY * battery, CONTROLLER *controller,int *state);
-  char* API_Parse_Command(String topic, String *data);
+  char* Parse_Command(String topic, String *data);
   
   enum Liam_Command_STATUS_CODE
   {
@@ -28,8 +28,8 @@ public:
     GetCommands = 100,
     GetMowerStatus = 101,
     GetState = 102,
-    GetBattery = 103,
-    GetSensor = 104,
+    GetBattery = 103, 
+    GetSensor = 104, // LEFT/RIGHT [0/1]
     GetMotor = 105, // ;105:MOTOR[0=left,1=Right,2=cutter]#
     GetSlowWheelWhenDocking = 106,
     GetWheelOverloadLevel = 107,

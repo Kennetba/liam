@@ -211,7 +211,49 @@ void CONTROLLER::setDefaultDirectionForward(bool fwd) {
     default_dir_fwd = -1;
 };
 
+    void CONTROLLER::adjustMotorSpeeds(short percent,void (*UpdateJSONObject)(int MQTT_VALUES, char *value))
+// void CONTROLLER::adjustMotorSpeeds(short percent)
+{
+  char buf[64];
+  if(this->lastloopsensorwasoutside != sensor->isInside())
+    {
+      counter=0;
+      sprintf_P(buf, PSTR("{\"message\":\"%s sensor outside during docking\"}"),ORIENTATION_STRING[sensor->currentSensor]);
+      UpdateJSONObject(MQTT_MESSAGE,buf);
+    }
+    this->lastloopsensorwasoutside=sensor->isInside();
+
+    int  lms = abs(leftMotor->getSpeed());
+    int  rms = abs(rightMotor->getSpeed());
+	  if (!sensor->isInside()) {
+      // check right sensor ?? if out turn hard right.
+      lms = FULLSPEED;
+      if(percent - counter > -100)
+		    rms = percent - counter;
+    }
+	  else if (sensor->isInside())
+	  {
+      // sätt timer och om timer > 1000 sväng hårt vänster..
+      if(percent - counter > -100)
+        lms = percent - counter;
+		  rms = FULLSPEED;
+	  }
+	  else {
+		  rms += 80;
+		  lms += 80;
+	  }
+
+    if (rms > 100) rms = 100;
+    if (lms > 100) lms = 100;
+    if (rms < -50) rms = -50;
+    if (lms < -50) lms = -50;
+    counter ++;
+    leftMotor->setSpeed(default_dir_fwd*lms);
+    rightMotor->setSpeed(default_dir_fwd*rms);
+}
+
 void CONTROLLER::adjustMotorSpeeds() {
+  return;
   int  lms;
   int  rms;
   int ltime;
@@ -219,7 +261,7 @@ void CONTROLLER::adjustMotorSpeeds() {
   int lowSpeed = 40;
   int highSpeed = FULLSPEED;
   int shortTime = 10;
-  int longTime = 200;
+  int longTime = 500;
 
   if (sensor->isOutOfBounds()) {
 	  //Serial.println("Adjust to out of bounds");

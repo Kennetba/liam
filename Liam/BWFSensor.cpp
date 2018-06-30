@@ -44,7 +44,7 @@
 int BWFSENSOR::outside_code[] = {OUTSIDE_BWF, INSIDE_BWF-OUTSIDE_BWF};
 int BWFSENSOR::inside_code[] = {INSIDE_BWF};
 
-int currentSensor = 0;
+
 
 BWFSENSOR::BWFSENSOR(int selA, int selB) {
   selpin_A = selA;

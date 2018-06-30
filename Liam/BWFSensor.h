@@ -39,6 +39,7 @@ public:
   void readSensor();
 
   void printSignal();
+  int currentSensor = 0;
 
 private:
   // BWF Code for inside and outside the fence

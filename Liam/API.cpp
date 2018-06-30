@@ -18,7 +18,7 @@ API::API(BATTERY *battery,CONTROLLER *controller,int *state)
   this->state = state;
 }
  
- char* API::API_Parse_Command(String topic,String *data)
+ char* API::Parse_Command(String topic,String *data)
 {
    StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(*data);
@@ -44,7 +44,7 @@ API::API(BATTERY *battery,CONTROLLER *controller,int *state)
     {
       case API::Liam_Command::SetState:
      sprintf_P(_resp, PSTR("{\"Set_state\":\"%s\"}"),Cutter_states_STRING[cmdargs[1]]);
-    *state = cmdargs[1];
+      *state = cmdargs[1];
         break;
       default:
       sprintf_P(_resp, PSTR("{\"cmd\":%i,\"result\":\"ERROR\"}"),cmdargs[0]);

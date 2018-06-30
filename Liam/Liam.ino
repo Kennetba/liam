@@ -81,8 +81,6 @@ long last_mqtt;
 int state;
 int previousState = -1;
 int command;
-
-char commonBuffer[20];
 long time_at_turning = millis();
 
 bool sensorOutside[2];
@@ -139,7 +137,7 @@ ERROR Error(&Display, LED_PIN, &Mower);
 
 //  API
 
-API api(&Battery,&Mower,&state);
+API API(&Battery,&Mower,&state);
 // This function calls the sensor object every time there is a new signal pulse on pin2
 void updateBWF() {
   Sensor.readSensor();
@@ -216,7 +214,7 @@ void setup() {
     }
   }
 #if USE_MQTT
-    Serial.println(F("Laddar MQTT stöd."));
+    Serial.println(F("Loading MQTT support."));
     mqtt_setup();
 #endif
 } // setup.
@@ -378,15 +376,16 @@ void doDocking() {
 
   // If the mower hits something along the BWF
   if(Mower.wheelsAreOverloaded()) {
+    sprintf_P(buf, PSTR("%s%i"), "wheel overload trigged: ", collisionCount);
+    UpdateJSONObject(MQTT_MESSAGE, buf);  
     if(millis() - lastCollision > 10000)
       collisionCount = 0;
     collisionCount++;
     lastCollision = millis();
-    #if USE_MQTT
-    sprintf_P(buf, PSTR("%S%i") , "Collision while docking: ",collisionCount);
-    UpdateJSONObject(MQTT_MESSAGE,buf);
-
-    #else
+#if USE_MQTT
+    sprintf_P(buf, PSTR("%s%i"), "Collision while docking: ", collisionCount);
+    UpdateJSONObject(MQTT_MESSAGE, buf);
+#else
     Serial.print(F("Collision while docking: "));
     Serial.println(collisionCount);
 #endif
@@ -423,6 +422,7 @@ void doDocking() {
       Mower.turnRight(20);
       Mower.stop();
       Mower.runForward(FULLSPEED);
+      Sensor.select(0);
     }
     lastAllOutsideCheck = millis();
   }
@@ -437,7 +437,8 @@ void doDocking() {
 
   // Track the BWF by compensating the wheel motor speeds
   Sensor.select(ORIENTATION::LEFT);
-  Mower.adjustMotorSpeeds();
+  Mower.adjustMotorSpeeds(35,&UpdateJSONObject);
+  // Mower.adjustMotorSpeeds();
 } // DOCKING
 
 void doLookForBWF() {
@@ -445,6 +446,8 @@ void doLookForBWF() {
 
   // If sensor is outside, then the BWF has been found
   if(sensorOutside[ORIENTATION::LEFT]) {
+    Mower.stop();
+    Mower.turnRight(90);
     state = DOCKING;
     return;
   }
@@ -520,12 +523,15 @@ void loop() {
 
   Battery.updateVoltage();
 
-  // Check state of all sensors
+    // Check state of all sensors
   for(int i = 0; i < 2; i++) {
     Sensor.select(i);
     sensorOutside[i] = Sensor.isOutOfBounds();
   }
-
+  if (Cutter_states::DOCKING)
+  {
+    Sensor.select(ORIENTATION::LEFT);
+  }
   // Safety checks
   checkIfFlipped();
   checkIfLifted();
@@ -588,7 +594,7 @@ void mqttData(void *response)
 
   char temp[64];
   // response needs to be copied due to scope issues i guess //
-  strcpy(temp,api.API_Parse_Command(topic ,&data));
+  strcpy(temp,API.Parse_Command(topic ,&data));
   mqtt.publish("/liam/1/cmd_resp",temp);
 };
 void mqttConnected(void *response)
