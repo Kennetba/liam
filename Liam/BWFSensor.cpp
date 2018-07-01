@@ -55,7 +55,6 @@ BWFSENSOR::BWFSENSOR(int selA, int selB) {
 // Select active sensor
 void BWFSENSOR::select(int sensornumber) {
   if (currentSensor == sensornumber) {
-
     return;
   }
   currentSensor = sensornumber;
@@ -125,6 +124,7 @@ void BWFSENSOR::readSensor() {
     // Check if the entire pulse train has been batched
     if (pulse_count_inside >= sizeof(inside_code)/sizeof(inside_code[0])) {
       signal_status = INSIDE;
+      this->sensorOutside[currentSensor] = false;
       last_match = millis();
       pulse_count_inside=0;
     }
@@ -137,6 +137,7 @@ void BWFSENSOR::readSensor() {
     pulse_count_outside++;
     if (pulse_count_outside >= sizeof(outside_code)/sizeof(outside_code[0])) {
       signal_status = OUTSIDE;
+      this->sensorOutside[currentSensor] = true;
       last_match = millis();
       pulse_count_outside=0;
     }

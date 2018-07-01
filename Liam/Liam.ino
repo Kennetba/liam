@@ -82,8 +82,9 @@ int state;
 int previousState = -1;
 int command;
 long time_at_turning = millis();
+bool unsecurePulseHasPassed = false;
 
-bool sensorOutside[2];
+// bool sensorOutside[2];
 
 
 // Set up all the defaults (check the Definition.h file for all default values)
@@ -140,7 +141,15 @@ ERROR Error(&Display, LED_PIN, &Mower);
 API API(&Battery,&Mower,&state);
 // This function calls the sensor object every time there is a new signal pulse on pin2
 void updateBWF() {
-  Sensor.readSensor();
+
+  if(unsecurePulseHasPassed)
+    {
+      Sensor.readSensor();
+      unsecurePulseHasPassed = false;
+      Sensor.select(Sensor.currentSensor = 0 ? 1:0)
+    }
+    else
+      unsecurePulseHasPassed = true;
 }
 
 void setMowerState()
@@ -295,7 +304,7 @@ void doMowing() {
       Serial.println(buf);
     }
     #endif
-    Sensor.select(i);
+    // Sensor.select(i);
     Mower.stop();
 
     int err = Mower.GoBackwardUntilInside(&Sensor);
@@ -422,7 +431,7 @@ void doDocking() {
       Mower.turnRight(20);
       Mower.stop();
       Mower.runForward(FULLSPEED);
-      Sensor.select(0);
+      // Sensor.select(0);
     }
     lastAllOutsideCheck = millis();
   }
@@ -436,7 +445,7 @@ void doDocking() {
   }
 
   // Track the BWF by compensating the wheel motor speeds
-  Sensor.select(ORIENTATION::LEFT);
+  // Sensor.select(ORIENTATION::LEFT);
   Mower.adjustMotorSpeeds(35,&UpdateJSONObject);
   // Mower.adjustMotorSpeeds();
 } // DOCKING
@@ -524,14 +533,11 @@ void loop() {
   Battery.updateVoltage();
 
     // Check state of all sensors
-  for(int i = 0; i < 2; i++) {
-    Sensor.select(i);
-    sensorOutside[i] = Sensor.isOutOfBounds();
-  }
-  if (Cutter_states::DOCKING)
-  {
-    Sensor.select(ORIENTATION::LEFT);
-  }
+  // for(int i = 0; i < 2; i++) {
+  //   // Sensor.select(i);
+  //   // sensorOutside[i] = Sensor.isOutOfBounds();
+  // }
+ 
   // Safety checks
   checkIfFlipped();
   checkIfLifted();
