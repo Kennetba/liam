@@ -138,7 +138,7 @@ static const char *ORIENTATION_STRING[] = {
 
 #define MAJOR_VERSION           5
 #define MINOR_VERSION_1         2
-#define MINOR_VERSION_2         4
+#define MINOR_VERSION_2         6
 
 // A bit of macro magic to make a string out of the version number
 // The preprocessor works in mysterious ways...
