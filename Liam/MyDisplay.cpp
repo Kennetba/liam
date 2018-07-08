@@ -88,6 +88,9 @@ void MYDISPLAY::update()
     case DOCKING:
       print(F("DOCKING"));
       break;
+      case IDLE:
+      print(F("IDLE"));
+      break;
     case CHARGING:
       print(F("CHARGING"));
       break;

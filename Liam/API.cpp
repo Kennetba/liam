@@ -2,8 +2,6 @@
 API INIT
 */
 
-
-
 #include <Arduino.h>
 #include "Definition.h"
 #include "API.h"
@@ -17,21 +15,21 @@ API::API(BATTERY *battery,CONTROLLER *controller,int *state)
   this->controller = controller;
   this->state = state;
 }
- 
+
  char* API::Parse_Command(String topic,String *data)
 {
-   StaticJsonBuffer<200> jsonBuffer;
+  // holds command
+   StaticJsonBuffer<100> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(*data);
     // Test if parsing succeeds.
+    char _resp[64]; // Mqtt response.
     if (!root.success())
     {
-      // mqtt.publish("/liam/1/cmd_resp", "JSON parser faild");
-      return;
+      sprintf_P(_resp, PSTR("{\"Error\":\"%s\",\"Command\":\"%s\"}"),"JSON parse failed",data);
+      return _resp;
     }
-    char _resp[64]; // Mqtt response.
-  // holds command
   int cmdargs[10] ={-1};
-  // set topic to lowecase..
+  // // set topic to lowecase..
   for (int i = 0; topic[i]; i++)
   {
     topic[i] = tolower(topic[i]);
@@ -67,6 +65,10 @@ API::API(BATTERY *battery,CONTROLLER *controller,int *state)
       sprintf_P(_resp, PSTR("{\"cmd\":%i,\"result\":%i}"), cmdargs[0], API::Liam_Command_STATUS_CODE::API_CODE_ERROR);
       break;
     }
+  }
+  else
+  {
+    sprintf_P(_resp, PSTR("{\"Error\":%i,\"message\":\"%s\"}"),cmdargs[0],"Could not read topic");
   }
   return _resp;
 }

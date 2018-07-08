@@ -377,7 +377,7 @@ void doDocking() {
   // If the mower hits something along the BWF
   if(Mower.wheelsAreOverloaded()) {
     sprintf_P(buf, PSTR("%s%i"), "wheel overload trigged: ", collisionCount);
-    UpdateJSONObject(MQTT_MESSAGE, buf);  
+    UpdateJSONObject(MQTT_MESSAGE, buf);
     if(millis() - lastCollision > 10000)
       collisionCount = 0;
     collisionCount++;
@@ -511,7 +511,7 @@ void loop() {
   static long lastDisplayUpdate = 0;
 
   long looptime = millis();
-  
+
   if(state != previousState)
   {
     char buf[40] ={'\0'};
@@ -586,7 +586,7 @@ void loop() {
 
 void mqttData(void *response)
 {
- 
+
   ELClientResponse *res = (ELClientResponse *)response;
 
   String topic = res->popString();
